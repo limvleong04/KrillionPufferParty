@@ -40,6 +40,21 @@ recognition, which is free and doesn't go online.
 4. **Optional dry run:** `dotnet run -c Release -- --demo` fills the window with a sample list without calling
    the API. Use it to drag the window to a good spot beside the game. The position is remembered.
 
+## Using it on another PC
+
+The API key is never stored in this repo. It lives in the Windows environment variable on each PC, so cloning
+the repo alone isn't enough. On the new PC:
+
+1. Install the .NET 10 SDK.
+2. Clone the repo.
+3. Set `ANTHROPIC_API_KEY` there too, as in setup step 2. It's best to create a separate key for each PC (for
+   example "puffer-helper-laptop") so you can revoke one without breaking the other.
+4. Run `dotnet run -c Release` in the cloned folder.
+
+The game area, window position and cost total are saved per PC in `%AppData%\PufferHelper`, so on a new PC you
+pick the game area once (Ctrl+Alt+R) and the cost line starts at zero. Your real total across all PCs is on
+platform.claude.com under Usage.
+
 ## Picking the screen region
 
 Press **Ctrl+Alt+R** with the game showing. The screen freezes and dims. Drag a box around the part of the game
