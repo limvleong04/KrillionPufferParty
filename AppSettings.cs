@@ -6,8 +6,8 @@ namespace PufferHelper;
 /// <summary>Settings kept in %AppData%\PufferHelper\settings.json. Edit the file while the helper is closed.</summary>
 internal sealed class AppSettings
 {
-    /// <summary>Claude model id. "claude-haiku-5-5" is faster and much cheaper.</summary>
-    public string Model { get; set; } = "claude-opus-5-5";
+    /// <summary>Claude model id. Haiku 5.5 is fast and costs a fraction of a cent per ask; "claude-opus-5-5" is stronger on obscure categories.</summary>
+    public string Model { get; set; } = "claude-haiku-5-5";
 
     /// <summary>How hard the model thinks: low, medium, high or max. Low keeps answers coming in a few seconds.</summary>
     public string Effort { get; set; } = "low";

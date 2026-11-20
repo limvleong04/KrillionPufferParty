@@ -74,7 +74,7 @@ then restart the helper after editing it.
 
 | Setting | Default | Notes |
 |---|---|---|
-| `Model` | `claude-opus-5-5` | Use `claude-haiku-5-5` for faster, much cheaper answers. It's a bit weaker on obscure categories. |
+| `Model` | `claude-haiku-5-5` | Fast and very cheap. `claude-opus-5-5` is stronger on obscure categories but costs about 30× more. |
 | `Effort` | `low` | `low`, `medium`, `high` or `max`. Higher means slower and more expensive. Low is plenty for this. |
 | `AnswerCount` | `25` | Answers per request (5–60). |
 | `HideFromScreenCapture` | `true` | Set `false` if you want the window to show up in your own screenshots. |
@@ -85,8 +85,11 @@ then restart the helper after editing it.
 
 Each **Ctrl+Alt+Q** is one API request with one screenshot.
 
-- **Claude Opus 5.5** at low effort: roughly 1–2 US cents, so an evening of 100 categories is about $1–2.
-- **Claude Haiku 5.5**: well under a tenth of a cent.
+Measured on a sample game screen (about 1,600 tokens in and 180 out):
+
+- **Claude Haiku 5.5** (the default): about 0.03¢ and 2 seconds per ask, so $5 lasts for well over 10,000
+  categories.
+- **Claude Opus 5.5** at low effort: about 1¢ and 4 seconds per ask, so roughly 500 categories for $5.
 
 Ctrl+Alt+W never calls the API.
 
