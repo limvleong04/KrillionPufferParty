@@ -37,6 +37,12 @@ internal sealed class AnswerService
 
     private AnthropicClient? _client;
 
+    /// <summary>
+    /// Raised as soon as a response arrives, before it is checked, so requests that end in an error are still
+    /// counted. Runs on the caller's (UI) thread.
+    /// </summary>
+    public event Action<RequestUsage>? UsageReported;
+
     public async Task<AnswerResult> AskAsync(byte[] png, IReadOnlyCollection<string> knownUsed, AppSettings settings, CancellationToken ct)
     {
         // Created on first use so a missing API key shows up as a status message rather than a crash at start-up.
@@ -87,6 +93,7 @@ internal sealed class AnswerService
             };
 
         BetaMessage response = await _client.Beta.Messages.Create(parameters, ct);
+        ReportUsage(settings.Model, response.Usage);
 
         if (response.StopReason == "refusal")
             throw new InvalidOperationException("Claude declined to answer this one.");
@@ -95,6 +102,15 @@ internal sealed class AnswerService
 
         string json = string.Concat(response.Content.Select(b => b.Value).OfType<BetaTextBlock>().Select(t => t.Text));
         return Parse(json, knownUsed);
+    }
+
+    private void ReportUsage(string model, BetaUsage usage)
+    {
+        // Thinking is billed as output and is already inside OutputTokens. Cache tokens are counted at the full
+        // input price: this app doesn't use prompt caching, so they are normally zero anyway.
+        long input = usage.InputTokens + (usage.CacheCreationInputTokens ?? 0) + (usage.CacheReadInputTokens ?? 0);
+        long output = usage.OutputTokens;
+        UsageReported?.Invoke(new RequestUsage(model, input, output, Pricing.Cost(model, input, output)));
     }
 
     private static AnswerResult Parse(string json, IReadOnlyCollection<string> knownUsed)

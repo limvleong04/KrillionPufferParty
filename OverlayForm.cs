@@ -26,6 +26,13 @@ internal sealed class OverlayForm : Form
     private readonly Label _statusLabel;
     private readonly AnswerListControl _list;
     private readonly Label _footerLabel;
+    private readonly Label _costLabel;
+    private readonly ToolTip _costTip = new() { InitialDelay = 300, AutoPopDelay = 15000 };
+
+    private SpendLedger _ledger = SpendLedger.Load();
+    private RequestUsage? _lastUsage;
+    private int _sessionRequests;
+    private decimal _sessionDollars;
 
     /// <summary>Answers used in the current category: seen on screen, or clicked off by you.</summary>
     private readonly List<string> _used = [];
@@ -89,20 +96,34 @@ internal sealed class OverlayForm : Form
             Text = Title,
         };
 
-        // Docking is laid out from the last-added control to the first: Fill goes in first, the top label last.
+        _costLabel = new Label
+        {
+            Dock = DockStyle.Bottom,
+            Height = 20,
+            ForeColor = Muted,
+            Font = new Font("Segoe UI", 8f),
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+        };
+
+        // Docking is laid out from the last-added control to the first: Fill goes in first, the top label last,
+        // and the footer after the cost line so the footer ends up at the very bottom.
         Controls.Add(_list);
+        Controls.Add(_costLabel);
         Controls.Add(_footerLabel);
         Controls.Add(_statusLabel);
         Controls.Add(_categoryLabel);
 
         _list.UsedToggled += OnAnswerClicked;
+        _answerService.UsageReported += OnUsageReported;
+        UpdateCostLabel();
 
         var menu = BuildMenu();
         ContextMenuStrip = menu;
         foreach (Control c in Controls)
             c.ContextMenuStrip = menu;
 
-        foreach (Control c in new Control[] { this, _categoryLabel, _statusLabel, _footerLabel })
+        foreach (Control c in new Control[] { this, _categoryLabel, _statusLabel, _footerLabel, _costLabel })
         {
             c.MouseDown += OnDragStart;
             c.MouseMove += OnDragMove;
@@ -442,13 +463,63 @@ internal sealed class OverlayForm : Form
             _used.RemoveAll(u => AnswerMatcher.SameAnswer(u, answer));
     }
 
+    // ---- cost readout -------------------------------------------------------------------------------
+
+    private void OnUsageReported(RequestUsage usage)
+    {
+        _lastUsage = usage;
+        _sessionRequests++;
+        _sessionDollars += usage.Dollars ?? 0m;
+        _ledger.Add(usage);
+        _ledger.TrySave();
+        UpdateCostLabel();
+    }
+
+    private void ResetCostTotal()
+    {
+        _ledger = new SpendLedger();
+        _ledger.TrySave();
+        _lastUsage = null;
+        _sessionRequests = 0;
+        _sessionDollars = 0m;
+        UpdateCostLabel();
+        SetStatus("Cost total reset.");
+    }
+
+    private void UpdateCostLabel()
+    {
+        if (_ledger.Requests == 0)
+        {
+            _costLabel.Text = "Cost: nothing spent yet";
+            _costTip.SetToolTip(_costLabel, "Each answer request shows its estimated cost here.");
+            return;
+        }
+
+        string last = _lastUsage is { } u ? (u.Dollars is decimal d ? Pricing.Format(d) : "?") : "–";
+        string total = Pricing.Format(_ledger.Dollars) + (_ledger.UnpricedRequests > 0 ? "+" : "");
+        string asks = _sessionRequests == 1 ? "1 ask" : $"{_sessionRequests} asks";
+        _costLabel.Text = $"Cost: last {last}  ·  session {Pricing.Format(_sessionDollars)} in {asks}  ·  " +
+                          $"total {total} since {_ledger.Since:d MMM}";
+
+        string lastDetail = _lastUsage is { } lu
+            ? $"Last ask: {lu.InputTokens:N0} input + {lu.OutputTokens:N0} output tokens on {lu.Model}" +
+              (lu.Dollars is null ? " (no price on file for this model, so it isn't in the totals)." : ".")
+            : "No ask yet this session.";
+        _costTip.SetToolTip(_costLabel,
+            $"{lastDetail}\n" +
+            $"All time: {_ledger.Requests:N0} asks, {_ledger.InputTokens:N0} input + {_ledger.OutputTokens:N0} output tokens.\n" +
+            "Estimates from list prices. platform.claude.com > Usage has the exact figures.\n" +
+            "Right-click > Reset cost total starts the count again.");
+    }
+
     // ---- layout, menu, dragging ---------------------------------------------------------------------
 
     private void SetStatus(string text) => _statusLabel.Text = text;
 
     private void FitHeight()
     {
-        Height = Padding.Vertical + _categoryLabel.Height + _statusLabel.Height + _list.PreferredListHeight + _footerLabel.Height + 4;
+        Height = Padding.Vertical + _categoryLabel.Height + _statusLabel.Height + _list.PreferredListHeight
+                 + _costLabel.Height + _footerLabel.Height + 4;
         KeepOnScreen();
     }
 
@@ -485,6 +556,7 @@ internal sealed class OverlayForm : Form
             SetStatus("Using the whole screen.");
         });
         menu.Items.Add("Clear list", null, (_, _) => ClearList());
+        menu.Items.Add("Reset cost total", null, (_, _) => ResetCostTotal());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Open settings file", null, (_, _) => OpenSettingsFile());
         menu.Items.Add("Exit", null, (_, _) => Close());

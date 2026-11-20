@@ -62,8 +62,8 @@ that shows **the category and the answers played so far**, then let go. The area
 - The highlighted answer is the first one not used yet. That's the one to type.
 - **Click** an answer to cross it off, for example after you've typed it. Click again to undo. Clicking the
   window doesn't take focus away from the game's text box, so you can keep typing.
-- Drag the title to move the window. **Right-click** it for the menu: get answers, pick area, clear list, open
-  settings, exit.
+- Drag the title to move the window. **Right-click** it for the menu: get answers, pick area, clear list, reset
+  cost total, open settings, exit.
 - The window is left out of screen sharing (Discord, OBS, Teams), recordings and screenshots, so friends watching
   your stream won't see it. It's only on your physical screen.
 
@@ -88,7 +88,16 @@ Each **Ctrl+Alt+Q** is one API request with one screenshot.
 - **Claude Opus 5.5** at low effort: roughly 1–2 US cents, so an evening of 100 categories is about $1–2.
 - **Claude Haiku 5.5**: well under a tenth of a cent.
 
-Ctrl+Alt+W never calls the API. You can see your actual spending in the Anthropic Console under Usage.
+Ctrl+Alt+W never calls the API.
+
+**The cost line** near the bottom of the window shows the estimated cost of the last ask, this session, and a
+running total that carries over between sessions (stored in `%AppData%\PufferHelper\usage.json`). For example:
+`Cost: last 1.4¢ · session 17¢ in 12 asks · total 50¢ since 20 Nov`. Hover over it to see token counts.
+Right-click > **Reset cost total** starts the count again, for example when you add new credit.
+
+It's an estimate from the list prices in `Pricing.cs` (update them there if prices change). If you cut a request
+short by pressing Ctrl+Alt+Q again before it answers, that request may still be billed but isn't counted. Your exact
+spending and remaining credit are on platform.claude.com under Usage and Billing.
 
 If Claude declines a category (a rare false alarm), the request is set up to let the API retry it automatically
 on another model, so you still get a list. This applies to Opus, not Haiku.
@@ -116,4 +125,5 @@ on another model, so you still get a list. This applies to Opus, not Haiku.
 | `OcrReader.cs` | Windows text recognition, used by Ctrl+Alt+W |
 | `AnswerMatcher.cs` | Loose matching of answers (case, accents, plurals) |
 | `ScreenGrabber.cs` | Screenshots and resizing |
+| `Pricing.cs`, `SpendLedger.cs` | Price table and the running cost total |
 | `AppSettings.cs`, `HotkeyBinding.cs`, `NativeMethods.cs` | Settings file, hotkey parsing, Windows API calls |
